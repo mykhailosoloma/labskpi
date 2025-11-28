@@ -1,0 +1,100 @@
+@startuml
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+autonumber
+
+' --- Актори ---
+actor "Користувач" as User
+
+' --- Внутрішні системи ---
+box "E-Commerce Platform" #WhiteSmoke
+    participant "Web Store\n(Frontend)" as Web
+    participant "Order Service\n(Core Logic)" as OrderSys
+    participant "Inventory Service\n(Складська система)" as StockSys
+    participant "Notification Service\n(Сповіщення)" as NotifySys
+end box
+
+' --- Зовнішні системи та БД ---
+participant "Payment Gateway\n(Банк/Visa/Mastercard)" as Bank
+database "Shared Database" as DB
+
+' --- СЦЕНАРІЙ: Place Order (FR6) ---
+User -> Web: Натискає "Оформити замовлення"
+activate Web
+
+    Web -> OrderSys: POST /createOrder(userId, items)
+    activate OrderSys
+
+    ' 1. Взаємодія з системою складу (Inventory)
+    note right of OrderSys: Крок 1: Резервування товарів
+    
+    loop for each item
+        OrderSys -> StockSys: reserveItem(itemId, qty)
+        activate StockSys
+        
+        StockSys -> DB: checkAndLockStock()
+        activate DB
+        DB --> StockSys: ok
+        deactivate DB
+        
+        alt Success
+            StockSys --> OrderSys: Reserved OK
+        else Out of Stock
+            StockSys --> OrderSys: Error (Not Available)
+            OrderSys --> Web: Error: "Товар розпродано"
+            Web --> User: Показати помилку
+        end
+        deactivate StockSys
+    end
+
+    ' 2. Взаємодія із зовнішньою платіжною системою
+    note right of OrderSys: Крок 2: Оплата (Зовнішня система)
+    
+    OrderSys -> Bank: processPayment(cardData, amount)
+    activate Bank
+    
+    alt Payment Approved
+        Bank --> OrderSys: Transaction ID (Success)
+        deactivate Bank
+        
+        ' 3. Збереження замовлення
+        OrderSys -> DB: saveOrder(status="PAID")
+        activate DB
+        DB --> OrderSys: orderId
+        deactivate DB
+
+        ' 4. Підтвердження списання зі складу
+        OrderSys -> StockSys: commitStock reduction(orderId)
+        activate StockSys
+        StockSys -> DB: updateQuantity()
+        activate DB
+        deactivate DB
+        deactivate StockSys
+
+        ' 5. Взаємодія з системою сповіщень
+        OrderSys -> NotifySys: sendEmail(userId, "Order Confirmed")
+        activate NotifySys
+        NotifySys --> User: Email/SMS: "Замовлення прийнято"
+        deactivate NotifySys
+
+        OrderSys --> Web: Order Success (Details)
+        
+        Web --> User: Показати сторінку "Дякуємо за покупку"
+        
+    else Payment Declined
+        Bank --> OrderSys: Error (Insufficient Funds)
+        deactivate Bank
+        
+        ' Відкат резерву (Compensating Transaction)
+        OrderSys -> StockSys: releaseReservation(items)
+        activate StockSys
+        deactivate StockSys
+        
+        OrderSys --> Web: Error: Payment Failed
+        Web --> User: Показати помилку оплати
+    end
+
+    deactivate OrderSys
+deactivate Web
+
+@enduml
