@@ -26,15 +26,14 @@
    * **Помилка:** Склад скасовує резерв (товар повертається у продаж), Покупець бачить причину відмови.
 
 ---
-
 ## 4. Графічні діаграми
 
 ### 4.1. UML Activity Diagram
 Нижче наведено діаграму діяльності, що відображає технічний алгоритм та потік даних.
 
-![Activity Diagram](<img width="1873" height="784" alt="Image" src="https://github.com/user-attachments/assets/f9c961c7-7214-4dd5-8700-d216d61e1d74" />)
+<img src="https://github.com/user-attachments/assets/f9c961c7-7214-4dd5-8700-d216d61e1d74" width="100%" alt="Activity Diagram" />
 
 ### 4.2. BPMN 2.0 Diagram
 Нижче наведено модель бізнес-процесу з використанням специфічних елементів BPMN (події, шлюзи, повідомлення).
 
-![BPMN Diagram](<img width="1875" height="791" alt="Image" src="https://github.com/user-attachments/assets/a4bf49d2-ced9-4cb4-9cfe-2faee96c50a3" />)
+<img src="https://github.com/user-attachments/assets/a4bf49d2-ced9-4cb4-9cfe-2faee96c50a3" width="100%" alt="BPMN Diagram" />
